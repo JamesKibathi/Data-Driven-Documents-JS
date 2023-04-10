@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Dynamic CSV Data Visualization</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    /* Add CSS styling here */
+    table {
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+      font-family: Arial, sans-serif;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    table th,
+    table td {
+      padding: 10px;
+      text-align: left;
+      border: 1px solid #ddd;
+    }
+
+    table th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+
+    /* Chart Styles */
+    #chart {
+      margin-top: 20px;
+      font-family: Arial, sans-serif;
+      width: 800px;
+      height: 400px;
+    }
+
+    .bar {
+      fill: #3182bd;
+    }
+
+    .bar:hover {
+      fill: #6baed6;
+    }
+
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: #000;
+    }
+
+    .axis text {
+      font-size: 12px;
+      transform: rotate(-45deg);
+      transform-origin: end;
+      margin-top: 10px;
+    }
+
+    #fieldSelect {
+      font-size: 14px;
+      padding: 5px 10px;
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Data Visualization - Driver Against Avg Stop Time</h1>
+  <div id="table"></div>
+  <div id="chart"></div>
+  <script>
+    // Load the data
+    d3.csv("standings_team.csv").then(function (data) {
+
+      // Create the table
+      var table = d3.select("#table").append("table");
+      var thead = table.append("thead");
+      var tbody = table.append("tbody");
+
+
+
+      // Create the bar graph
+      var svg = d3.select("#chart").append("svg")
+        .attr("width", 500)
+        .attr("height", 400);
+
+      var xScale = d3.scaleBand()
+        .range([50, 450])
+        .padding(0.1);
+
+      var yScale = d3.scaleLinear()
+        .range([350, 50]);
+
+      function updateChart() {
+        var selectedField = d3.select("#fieldSelect").property("value");
+
+        var groupData = d3.group(data, function (d) { return d[selectedField]; });
+        var barData = [];
+        groupData.forEach(function (value, key) {
+          barData.push({
+            category: key,
+            count: value.length
+          });
+        });
+
+        xScale.domain(barData.map(function (d) { return d.category; }));
+        yScale.domain([0, d3.max(barData, function (d) { return d.count; })]);
+
+        svg.selectAll(".axis").remove();
+        svg.selectAll(".bar").remove();
+
+        var xAxis = svg.append("g")
+          .attr("class", "axis")
+          .attr("transform", "translate(0, 350)")
+          .text("Formula 1 Driver")
+          .call(d3.axisBottom(xScale));
+
+
+        var yAxis = svg.append("g")
+          .text("Avg Stop Time")
+          .attr("class", "axis")
+          .attr("transform", "translate(50, 0)")
+          .call(d3.axisLeft(yScale));
+
+        var bars = svg.selectAll(".bar")
+          .data(barData)
+          .enter().append("rect")
+          .attr("class", "bar")
+          .attr("x", function (d) { return xScale(d.category); })
+          .attr("y", function (d) { return yScale(d.count); })
+          .attr("width", xScale.bandwidth())
+          .attr("height", function (d) { return 350 - yScale(d.count); });
+      }
+
+      // Create the field select dropdown
+      var fieldSelect = d3.select("#chart").append("div")
+        .text("Select a field to display in the chart: ")
+        .append("select")
+        .attr("id", "fieldSelect")
+        .on("change", updateChart);
+
+      fieldSelect.selectAll("option")
+        .data(Object.keys(data[0]))
+        .enter().append("option")
+        .attr("value", function (d) { return d; })
+        .text(function (d) { return d; });
+
+      // Initialize the chart
+      updateChart();
+
+      // Create the header row
+      var header = thead.append("tr");
+      Object.keys(data[0]).forEach(function (key) {
+        header.append("th").text(key);
+      });
+
+      // Create the data rows
+      var rows = tbody.selectAll("tr")
+        .data(data)
+        .enter().append("tr");
+      Object.keys(data[0]).forEach(function (key) {
+        rows.append("td").text(function (d) { return d[key]; });
+      });
+    });
+
+
+  </script>
+</body>
